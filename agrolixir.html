@@ -1,0 +1,454 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>AgroLixir — Soil Microbe Bank</title>
+
+    <!-- Tailwind CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Inter font -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- React + ReactDOM (UMD) -->
+    <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+
+    <!-- Babel for JSX in browser -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <style>
+      /* small custom CSS for animations & polish */
+      :root { --emerald: #0f766e; --emerald-600: #16a34a; }
+      body { font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; }
+
+      /* subtle floating animation for hero card */
+      @keyframes floaty {
+        0% { transform: translateY(0px); }
+        50% { transform: translateY(-8px); }
+        100% { transform: translateY(0px); }
+      }
+
+      .floaty { animation: floaty 6s ease-in-out infinite; }
+
+      /* reveal on scroll */
+      .reveal { opacity: 0; transform: translateY(14px); transition: opacity 600ms ease, transform 600ms ease; }
+      .reveal.visible { opacity: 1; transform: translateY(0); }
+
+      /* testimonial fade */
+      .fade { opacity: 0; transform: translateX(10px); transition: opacity 600ms ease, transform 600ms ease; }
+      .fade.show { opacity: 1; transform: translateX(0); }
+
+      /* sticky CTA bubble */
+      .cta-bubble {
+        position: fixed;
+        right: 18px;
+        bottom: 18px;
+        z-index: 60;
+        border-radius: 9999px;
+        box-shadow: 0 10px 30px rgba(16,24,40,0.2);
+      }
+
+      /* small responsive tweaks */
+      @media (min-width: 768px) {
+        .hero-graphic { height: 420px; }
+      }
+    </style>
+  </head>
+
+  <body class="bg-emerald-50 text-zinc-900">
+    <div id="root"></div>
+
+    <script type="text/babel">
+      const { useState, useEffect, useRef } = React;
+
+      /* -------------------------
+         Small utility components
+         ------------------------- */
+      const IconLeaf = ({ className = "h-6 w-6" }) => (
+        <svg className={className} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
+          <path d="M4 20c5-6 8-8 16-12-3 7-7 10-16 12z" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+          <path d="M14 6c1.5.5 2.5 1.8 3 3.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      );
+
+      const Check = ({ className="h-5 w-5 text-emerald-600" }) => (
+        <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden>
+          <path d="M5 13l4 4L19 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      );
+
+      /* -------------------------
+         Reveal on scroll hook
+         ------------------------- */
+      function useReveal(selector = ".reveal") {
+        useEffect(() => {
+          const els = Array.from(document.querySelectorAll(selector));
+          if (!els.length) return;
+          const io = new IntersectionObserver((entries) => {
+            entries.forEach(e => {
+              if (e.isIntersecting) e.target.classList.add("visible");
+            });
+          }, { threshold: 0.12 });
+          els.forEach(el => io.observe(el));
+          return () => io.disconnect();
+        }, [selector]);
+      }
+
+      /* -------------------------
+         Testimonial carousel
+         ------------------------- */
+      function useCarousel(itemsCount, delay = 4000) {
+        const [index, setIndex] = useState(0);
+        useEffect(() => {
+          const t = setInterval(() => setIndex(i => (i + 1) % itemsCount), delay);
+          return () => clearInterval(t);
+        }, [itemsCount, delay]);
+        return [index, setIndex];
+      }
+
+      /* -------------------------
+         App sections
+         ------------------------- */
+
+      function Header() {
+        const [open, setOpen] = useState(false);
+        return (
+          <header className="bg-white/80 backdrop-blur border-b border-zinc-200 fixed w-full z-40">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+              <div className="flex items-center justify-between h-16">
+                <a href="#home" className="flex items-center gap-3">
+                  <div className="p-2 rounded-md bg-emerald-100"><IconLeaf className="h-6 w-6 text-emerald-700"/></div>
+                  <span className="font-semibold text-zinc-900">AgroLixir</span>
+                </a>
+
+                <nav className="hidden md:flex gap-8 items-center text-sm text-zinc-700">
+                  <a href="#how" className="hover:text-zinc-900">How it works</a>
+                  <a href="#features" className="hover:text-zinc-900">Benefits</a>
+                  <a href="#pricing" className="hover:text-zinc-900">Pricing</a>
+                  <a href="#contact" className="hover:text-zinc-900">Contact</a>
+                </nav>
+
+                <div className="flex items-center gap-3">
+                  <a href="#contact" className="hidden md:inline-flex items-center gap-2 rounded-full bg-emerald-700 text-white px-4 py-2 text-sm shadow hover:scale-[1.02] transition">Get Started</a>
+
+                  {/* mobile menu */}
+                  <button className="md:hidden p-2" onClick={() => setOpen(o => !o)} aria-label="menu">
+                    <svg className="h-6 w-6" viewBox="0 0 24 24" fill="none"><path d="M4 6h16M4 12h16M4 18h16" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/></svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {open && (
+              <div className="md:hidden bg-white/90 border-t border-zinc-200">
+                <div className="px-4 py-4 flex flex-col gap-3">
+                  <a href="#how" onClick={() => setOpen(false)} className="text-zinc-700">How it works</a>
+                  <a href="#features" onClick={() => setOpen(false)} className="text-zinc-700">Benefits</a>
+                  <a href="#pricing" onClick={() => setOpen(false)} className="text-zinc-700">Pricing</a>
+                  <a href="#contact" onClick={() => setOpen(false)} className="text-zinc-700">Contact</a>
+                </div>
+              </div>
+            )}
+          </header>
+        );
+      }
+
+      function Hero() {
+        return (
+          <section id="home" className="pt-24 pb-12">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid md:grid-cols-2 gap-8 items-center">
+              <div>
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-100 text-emerald-700 text-sm mb-4">New • Pilot-ready • Demo plots</div>
+                <h1 className="text-4xl md:text-5xl font-extrabold leading-tight">
+                  Restore soils. <span className="bg-clip-text text-transparent bg-gradient-to-r from-emerald-800 via-emerald-600 to-green-400">Boost yields.</span> Reduce chemicals.
+                </h1>
+                <p className="mt-5 text-lg text-zinc-700 max-w-xl">AgroLixir is a regional Soil Microbe Bank™ — tailored microbial booster packs, WhatsApp agronomy support, and proof-first pilots for smallholders and estates.</p>
+
+                <div className="mt-8 flex flex-wrap gap-3">
+                  <a href="#pricing" className="rounded-full bg-emerald-700 text-white px-5 py-3 shadow hover:shadow-lg transition">See Pricing</a>
+                  <a href="#how" className="rounded-full border border-zinc-200 px-5 py-3 hover:bg-zinc-50 transition">How it works</a>
+                </div>
+
+                <div className="mt-6 flex items-center gap-6 text-sm text-zinc-600">
+                  <div className="flex items-center gap-2"><Check className/> 20–50% fertilizer savings</div>
+                  <div className="flex items-center gap-2"><Check className/> 15–40% yield uplift</div>
+                </div>
+              </div>
+
+              <div className="relative">
+                <div className="hero-graphic rounded-3xl bg-gradient-to-br from-emerald-50 to-white p-6 shadow-lg floaty">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="rounded-xl bg-white p-4 shadow-sm">
+                      <h3 className="font-semibold">Tailored Consortia</h3>
+                      <p className="text-sm text-zinc-600 mt-1">Nitrogen fixers, P/K solubilizers & mycorrhizae matched to your crop.</p>
+                    </div>
+                    <div className="rounded-xl bg-white p-4 shadow-sm">
+                      <h3 className="font-semibold">Easy Application</h3>
+                      <p className="text-sm text-zinc-600 mt-1">Seed coat, soil drench, or drip — no special equipment.</p>
+                    </div>
+                    <div className="rounded-xl bg-white p-4 shadow-sm">
+                      <h3 className="font-semibold">Data-backed</h3>
+                      <p className="text-sm text-zinc-600 mt-1">Regional Soil Microbiome Map improves recipes over time.</p>
+                    </div>
+                    <div className="rounded-xl bg-white p-4 shadow-sm">
+                      <h3 className="font-semibold">Farmer Support</h3>
+                      <p className="text-sm text-zinc-600 mt-1">WhatsApp agronomy + demo plots to build trust.</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="absolute -bottom-4 right-4 bg-white p-3 rounded-full shadow hidden md:block">
+                  <svg className="h-6 w-6 text-emerald-700" viewBox="0 0 24 24" fill="none"><path d="M3 12c5-6 8-8 16-12-3 7-7 10-16 12z" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                </div>
+              </div>
+            </div>
+          </section>
+        );
+      }
+
+      function Features() {
+        useReveal(".reveal");
+        const features = [
+          { title: "Higher yields", text: "Microbial booster packs improve nutrient uptake and root vigor for 15–40% better yields." },
+          { title: "Less chemical spend", text: "Reduce synthetic fertilizer by 20–50% using targeted bacterial consortia." },
+          { title: "Resilient soils", text: "Living microbes rebuild organic matter and protect against stress." },
+          { title: "Soil Microbe Bank", text: "Regional vault of beneficial strains and data for location-specific blends." },
+        ];
+
+        return (
+          <section id="features" className="py-16">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+              <div className="text-center mb-8">
+                <p className="text-emerald-700 font-semibold uppercase text-xs">Benefits</p>
+                <h2 className="text-3xl md:text-4xl font-bold">Why farmers choose AgroLixir</h2>
+              </div>
+
+              <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                {features.map((f, i) => (
+                  <div key={i} className="reveal rounded-2xl bg-white shadow p-6 hover:shadow-2xl transition transform hover:-translate-y-2">
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="rounded-xl bg-emerald-100 p-2"><IconLeaf className="h-5 w-5 text-emerald-700"/></div>
+                      <h3 className="font-semibold">{f.title}</h3>
+                    </div>
+                    <p className="text-sm text-zinc-600">{f.text}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </section>
+        );
+      }
+
+      function HowItWorks() {
+        useReveal(".reveal");
+        const steps = [
+          { n: 1, title: "Test & Profile", text: "Collect a soil sample or answer a short survey for a microbe recommendation." },
+          { n: 2, title: "Tailored Pack", text: "We match your farm to a microbe consortium for your crop & soil." },
+          { n: 3, title: "Apply Easily", text: "Seed coat, soil drench or drip — no special equipment required." },
+          { n: 4, title: "Track Results", text: "WhatsApp check-ins & simple dashboards to compare cost & yield." },
+        ];
+
+        return (
+          <section id="how" className="py-16 bg-zinc-50">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+              <div className="text-center mb-8">
+                <p className="text-emerald-700 font-semibold uppercase text-xs">How it works</p>
+                <h2 className="text-3xl md:text-4xl font-bold">From soil sample to stronger harvest</h2>
+              </div>
+
+              <div className="grid md:grid-cols-4 gap-6">
+                {steps.map((s, i) => (
+                  <div key={i} className="relative">
+                    <div className="reveal bg-white rounded-2xl p-6 shadow">
+                      <div className="flex items-center gap-3">
+                        <div className="rounded-full bg-emerald-600 text-white h-8 w-8 flex items-center justify-center font-semibold">{s.n}</div>
+                        <h3 className="font-semibold">{s.title}</h3>
+                      </div>
+                      <p className="text-sm text-zinc-600 mt-3">{s.text}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </section>
+        );
+      }
+
+      function Pricing() {
+        useReveal(".reveal");
+        const plans = [
+          { name: "Starter", price: "₹499", tag: "Per acre / season", items: ["Single-crop pack", "Seed coat or drench", "Basic guide"], featured: false },
+          { name: "Growth", price: "₹1,999", tag: "Per farm / year", items: ["Booster refills", "WhatsApp support", "Yield tracker"], featured: true },
+          { name: "Enterprise", price: "Custom", tag: "FPOs & Estates", items: ["Cluster profiling", "On-site training", "Carbon readiness"], featured: false },
+        ];
+
+        return (
+          <section id="pricing" className="py-16">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+              <div className="text-center mb-8">
+                <p className="text-emerald-700 font-semibold uppercase text-xs">Pricing</p>
+                <h2 className="text-3xl md:text-4xl font-bold">Simple, farmer-first plans</h2>
+              </div>
+
+              <div className="grid md:grid-cols-3 gap-6">
+                {plans.map((p, i) => (
+                  <div key={i} className={`reveal rounded-2xl p-6 ${p.featured ? "bg-emerald-700 text-white shadow-2xl" : "bg-white shadow"}`}>
+                    <div className="flex items-baseline justify-between">
+                      <h3 className="font-semibold text-lg">{p.name}</h3>
+                      <span className={`${p.featured ? "text-emerald-100" : "text-emerald-700"} text-sm`}>{p.tag}</span>
+                    </div>
+                    <div className="mt-3 text-3xl font-extrabold">{p.price}</div>
+                    <ul className={`mt-4 space-y-2 ${p.featured ? "text-emerald-50" : "text-zinc-700"}`}>
+                      {p.items.map((it, j) => <li key={j} className="flex items-center gap-2"><Check/> {it}</li>)}
+                    </ul>
+                    <a href="#contact" className={`mt-6 inline-flex items-center gap-2 rounded-full px-4 py-2 ${p.featured ? "bg-white text-emerald-700 font-semibold" : "border border-zinc-200 hover:bg-zinc-50"}`}>{p.featured ? "Subscribe" : "Get Started"}</a>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </section>
+        );
+      }
+
+      function Testimonials() {
+        const items = [
+          { text: "AgroLixir cut our urea use by 30% in the first season — remarkable!", who: "R. Singh, Wheat farmer" },
+          { text: "Root growth and plant vigor clearly improved. We'll subscribe next season.", who: "S. Patil, Cotton farmer" },
+          { text: "Co-op buying and demo plots helped adoption across villages.", who: "FPO Lead, Rajasthan" },
+        ];
+        const [index, setIndex] = useCarousel(items.length, 4000);
+        useEffect(() => {
+          // small accessibility: let left/right arrow change testimonial
+          function onKey(e) {
+            if (e.key === "ArrowLeft") setIndex(i => (i - 1 + items.length) % items.length);
+            if (e.key === "ArrowRight") setIndex(i => (i + 1) % items.length);
+          }
+          window.addEventListener("keydown", onKey);
+          return () => window.removeEventListener("keydown", onKey);
+        }, []);
+
+        return (
+          <section className="py-16 bg-white">
+            <div className="max-w-4xl mx-auto px-4 text-center">
+              <p className="text-emerald-700 font-semibold uppercase text-xs">Trusted by growers</p>
+              <h2 className="text-3xl md:text-4xl font-bold mt-2">From demo plots to district programs</h2>
+
+              <div className="mt-8 relative">
+                {items.map((it, i) => (
+                  <div key={i} className={`fade ${i === index ? "show" : ""} p-6 rounded-2xl shadow md:px-12 md:py-8 transition-all`} style={{ display: i === index ? "block" : "none" }}>
+                    <p className="text-lg text-zinc-700">{it.text}</p>
+                    <div className="mt-4 text-sm text-zinc-500">— {it.who}</div>
+                  </div>
+                ))}
+
+                <div className="flex justify-center gap-2 mt-5">
+                  {items.map((_, i) => (
+                    <button key={i} onClick={() => setIndex(i)} className={`h-2 w-8 rounded-full ${i === index ? "bg-emerald-700" : "bg-zinc-300"}`} aria-label={`Go to ${i+1}`} />
+                  ))}
+                </div>
+              </div>
+            </div>
+          </section>
+        );
+      }
+
+      function CTA() {
+        return (
+          <section className="py-12 bg-gradient-to-r from-emerald-700 to-emerald-600 text-white">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row items-center justify-between gap-6">
+              <div>
+                <h3 className="text-2xl font-bold">Launch a pilot in your village or FPO</h3>
+                <p className="mt-2 text-emerald-100">We set up demo plots, train local champions, and supply seasonal boosters with WhatsApp support.</p>
+              </div>
+              <div>
+                <a href="#contact" className="rounded-full bg-white text-emerald-700 px-6 py-3 font-semibold shadow hover:opacity-95">Book a Demo</a>
+              </div>
+            </div>
+          </section>
+        );
+      }
+
+      function ContactFooter() {
+        return (
+          <footer id="contact" className="bg-white border-t border-zinc-200">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 grid md:grid-cols-3 gap-8">
+              <div>
+                <div className="flex items-center gap-2 font-semibold"><IconLeaf className="h-5 w-5 text-emerald-700" /> AgroLixir</div>
+                <p className="text-sm text-zinc-600 mt-3">The Soil Microbe Bank™ — tailored microbial booster packs and farmer-first pilots.</p>
+              </div>
+
+              <div>
+                <div className="font-semibold mb-3">Company</div>
+                <ul className="space-y-2 text-sm text-zinc-700">
+                  <li><a href="#features" className="hover:text-zinc-900">Benefits</a></li>
+                  <li><a href="#how" className="hover:text-zinc-900">How it works</a></li>
+                  <li><a href="#pricing" className="hover:text-zinc-900">Pricing</a></li>
+                </ul>
+              </div>
+
+              <div>
+                <div className="font-semibold mb-3">Contact</div>
+                <ul className="space-y-2 text-sm text-zinc-700">
+                  <li>📞 +91-98765-43210</li>
+                  <li>✉️ hello@agrolixir.com</li>
+                  <li>Pune • Hyderabad • Delhi (pilot hubs)</li>
+                </ul>
+              </div>
+            </div>
+
+            <div className="border-t border-zinc-200 py-6 text-center text-xs text-zinc-500">© {new Date().getFullYear()} AgroLixir. All rights reserved.</div>
+          </footer>
+        );
+      }
+
+      /* Sticky floating WhatsApp-like CTA */
+      function FloatingCTA() {
+        return (
+          <a href="https://wa.me/919876543210?text=Hi%20AgroLixir%20team,%20I%20want%20a%20demo" target="_blank" rel="noreferrer" className="cta-bubble">
+            <div className="bg-emerald-600 p-4 rounded-full text-white flex items-center gap-3 shadow-lg hover:scale-105 transition transform">
+              <svg className="h-6 w-6" viewBox="0 0 24 24" fill="none"><path d="M21 15a5 5 0 0 0-5-5H8a5 5 0 1 0 0 10h6l4 4" stroke="white" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              <span className="hidden md:inline-block font-semibold">Chat on WhatsApp</span>
+            </div>
+          </a>
+        );
+      }
+
+      /* -------------------------
+         Main App
+         ------------------------- */
+      function App() {
+        // ensure reveal initial check after mount
+        useEffect(() => {
+          // make any already-in-view reveals visible
+          const els = document.querySelectorAll(".reveal");
+          els.forEach(el => {
+            const rect = el.getBoundingClientRect();
+            if (rect.top < window.innerHeight - 60) el.classList.add("visible");
+          });
+        }, []);
+
+        return (
+          <div>
+            <Header />
+            <main className="mt-2">
+              <Hero />
+              <Features />
+              <HowItWorks />
+              <Pricing />
+              <Testimonials />
+              <CTA />
+              <ContactFooter />
+            </main>
+
+            <FloatingCTA />
+          </div>
+        );
+      }
+
+      const root = ReactDOM.createRoot(document.getElementById("root"));
+      root.render(<App />);
+    </script>
+  </body>
+</html>
